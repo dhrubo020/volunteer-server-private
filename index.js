@@ -23,8 +23,20 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 client.connect(err => {
     const collection = client.db("db_volunteer_network").collection("coll_event_list");
     const collectionUserEvent = client.db("db_volunteer_network").collection("coll_user_event");
+    const collectionAdminAuth = client.db("db_volunteer_network").collection("coll_admin_auth");
     console.log("db connected")
 
+    app.post('/adminLogin', (req,res)=>{
+        const data = req.body;
+        collectionAdminAuth.find({email: data.email, password: data.password})
+        .toArray((err, documents) => {
+            if(documents.length > 0){
+                res.send(true)
+            }else{
+                res.send(false)
+            }
+        })
+    })
     app.post('/addNewEventItem', (req, res) => {
         const data = req.body;
         let same = 0;
@@ -71,12 +83,32 @@ client.connect(err => {
             })
     })
 
+    app.get('/userEventList', (req,res)=>{
+        collectionUserEvent.find({})
+        .toArray((err, documents)=>{
+                res.send(documents)
+        })
+    })
+
+    app.delete('/deleteUserFromEvent/:id', (req, res) => {
+        collectionUserEvent.find({ _id: ObjectId(req.params.id) })
+            .toArray((err, documents) => {
+                if (documents.length > 0) {
+                    collectionUserEvent.deleteOne({ _id: ObjectId(req.params.id) })
+                        .then(result => {
+                            res.send(result.deletedCount > 0)
+                        })
+                }
+            })
+    })
+
+
     //------------ api for user -------------
     
     app.post('/saveEvent' , (req,res)=>{
         const eventItem = req.body;
         console.log(eventItem)
-        collectionUserEvent.find({eventId: eventItem.eventId})
+        collectionUserEvent.find({email: eventItem.email, eventTitle: eventItem.eventTitle})
         .toArray((err , documents)=>{
             console.log(documents.length)
             if(documents.length > 0){
@@ -97,6 +129,19 @@ client.connect(err => {
         .toArray((err, documents)=>{
                 res.send(documents)
         })
+    })
+
+    app.delete('/deleteMyEvent/:id', (req, res) => {
+        console.log(req.params.id)
+        collectionUserEvent.find({ _id: ObjectId(req.params.id) })
+            .toArray((err, documents) => {
+                if (documents.length > 0) {
+                    collectionUserEvent.deleteOne({ _id: ObjectId(req.params.id) })
+                        .then(result => {
+                            res.send(result.deletedCount > 0)
+                        })
+                }
+            })
     })
 
 });
